@@ -4,19 +4,6 @@ import (
 	"context"
 )
 
-const NumNodes = 4
-
-type ViewNumber = int
-type UniqueID = int
-
-type Chain struct {
-	viewNumber   int
-	Uniq         UniqueID
-	network      Network
-	tally        Tally
-	viewNumberCh chan ViewNumber
-}
-
 func NewChain(uniq int, network Network) Chain {
 	return Chain{
 		Uniq:         uniq,
@@ -36,11 +23,11 @@ func (c *Chain) Run(ctx context.Context) {
 			c.viewNumber = i
 			if c.isLeader() {
 				// i'm the leader
-				//c.n.Broadcast(NetworkMsg{Type: NewView})
+				//c.n.Broadcast(Msg{Type: NewView})
 			} else {
 				//fmt.Println("sending new view")
 				c.network.Broadcast(
-					NetworkMsg{
+					Msg{
 						Type:       NewView,
 						Node:       c.Uniq,
 						ViewNumber: i,
@@ -48,34 +35,49 @@ func (c *Chain) Run(ctx context.Context) {
 				)
 			}
 		case m := <-c.network.ReceiveCh(c.Uniq):
-
-			switch m.Type {
-			case NewView:
-				if c.isLeader() {
-					// i'm the leader
+			if c.isLeader() {
+				switch m.Type {
+				case NewView:
 					err := c.tally.Add(m.Node)
 					if err != nil {
 						panic(err)
 					}
 					if c.tally.Len() == NumNodes {
-						c.network.Broadcast(NetworkMsg{
-							Type:       Prepare,
-							Node:       c.Uniq,
-							ViewNumber: c.viewNumber,
-							Signatures: c.tally.Len(),
-							Payload:    createProposal(),
+						c.network.Broadcast(Msg{
+							Justify: &QC{
+								Type:       Prepare,
+								Node:       c.Uniq,
+								ViewNumber: c.viewNumber,
+							},
+							Payload: createProposal(),
 						})
 					}
-
-				} else {
-
-					/* Pre commit phase */
-
-					// i'm not the leader
-					c.viewNumberCh <- m.ViewNumber
+				case Prepare:
+					err := c.tally.Add(m.Node)
+					if err != nil {
+						panic(err)
+					}
+					if c.tally.Len() == NumNodes {
+						c.network.Broadcast(Msg{
+							Justify: prepareQc,
+						})
+					}
 				}
+			} else {
+				switch m.Type {
+				case Prepare:
+					if m.QC == nil { // view change
 
+					} else {
+
+					}
+					if !isLeaderForView(m.Node, m.ViewNumber) {
+						panic("invalid message received")
+					}
+					c.network.Broadcast(m)
+				}
 			}
+
 		}
 
 	}
@@ -83,7 +85,11 @@ func (c *Chain) Run(ctx context.Context) {
 }
 
 func (c *Chain) isLeader() bool {
-	return c.viewNumber%NumNodes == c.Uniq
+	return c.isLeaderForView(c.viewNumber)
+}
+
+func isLeaderForView(viewNumber int, uniq UniqueID) bool {
+	return viewNumber%NumNodes == uniq
 }
 
 func Run() {

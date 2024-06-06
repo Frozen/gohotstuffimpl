@@ -3,14 +3,20 @@ package chain
 import "errors"
 
 type Tally struct {
-	m map[int]struct{}
+	m map[Vote]struct{}
 }
 
 func NewTally() Tally {
-	return Tally{m: make(map[int]struct{})}
+	return Tally{m: make(map[Vote]struct{})}
 }
 
-func (t *Tally) Add(i UniqueID) error {
+type Vote struct {
+	Type       MessageType
+	ViewNumber ViewNumber
+	Node       UniqueID
+}
+
+func (t *Tally) Add(i Vote) error {
 	if _, ok := t.m[i]; ok {
 		return errors.New("already tallied")
 	}

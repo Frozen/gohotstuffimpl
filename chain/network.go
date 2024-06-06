@@ -1,8 +1,8 @@
 package chain
 
 type Network interface {
-	Broadcast(msg NetworkMsg)
-	ReceiveCh(id UniqueID) chan NetworkMsg
+	Broadcast(msg Msg)
+	ReceiveCh(id UniqueID) chan Msg
 }
 
 type MessageType string
@@ -15,36 +15,28 @@ var (
 	Decide    MessageType
 )
 
-type NetworkMsg struct {
-	Type       MessageType
-	Node       int
-	ViewNumber int
-	Signatures int
-	Payload    []byte
-}
-
 type Broadcaster struct {
-	Chains []chan NetworkMsg
+	Chains []chan Msg
 }
 
-func NewBroadcaster(chs []chan NetworkMsg) *Broadcaster {
+func NewBroadcaster(chs []chan Msg) *Broadcaster {
 	return &Broadcaster{Chains: chs}
 }
 
-func (a *Broadcaster) Broadcast(m NetworkMsg) {
+func (a *Broadcaster) Broadcast(m Msg) {
 	for _, c := range a.Chains {
 		c <- m
 	}
 }
 
-func (a *Broadcaster) ReceiveCh(i UniqueID) chan NetworkMsg {
+func (a *Broadcaster) ReceiveCh(i UniqueID) chan Msg {
 	return a.Chains[i]
 }
 
-func channels(i int) []chan NetworkMsg {
-	ch := make([]chan NetworkMsg, i)
+func channels(i int) []chan Msg {
+	ch := make([]chan Msg, i)
 	for i := range ch {
-		ch[i] = make(chan NetworkMsg, 1)
+		ch[i] = make(chan Msg, 1)
 	}
 	return ch
 
