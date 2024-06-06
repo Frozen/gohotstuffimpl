@@ -38,11 +38,11 @@ func (c *Chain) Run(ctx context.Context) {
 			if c.isLeader() {
 				switch m.Type {
 				case NewView:
-					err := c.tally.Add(m.Node)
+					err := c.tally.Add(Vote{Type: NewView, ViewNumber: m.ViewNumber, Node: m.Node})
 					if err != nil {
 						panic(err)
 					}
-					if c.tally.Len() == NumNodes {
+					if c.tally.Len(NewView, m.ViewNumber) == NumNodes {
 						c.network.Broadcast(Msg{
 							Justify: &QC{
 								Type:       Prepare,
@@ -53,11 +53,15 @@ func (c *Chain) Run(ctx context.Context) {
 						})
 					}
 				case Prepare:
-					err := c.tally.Add(m.Node)
+					err := c.tally.Add(Vote{
+						Type:       Prepare,
+						ViewNumber: m.ViewNumber,
+						Node:       m.Node,
+					})
 					if err != nil {
 						panic(err)
 					}
-					if c.tally.Len() == NumNodes {
+					if c.tally.Len(Prepare, m.ViewNumber) == NumNodes {
 						c.network.Broadcast(Msg{
 							Justify: prepareQc,
 						})

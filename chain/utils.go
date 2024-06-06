@@ -24,6 +24,12 @@ func (t *Tally) Add(i Vote) error {
 	return nil
 }
 
-func (t *Tally) Len() int {
-	return len(t.m)
+func (t *Tally) Len(p MessageType, number ViewNumber) int {
+	i := 0
+	for v, _ := range t.m {
+		if p == v.Type && number == v.ViewNumber {
+			i++
+		}
+	}
+	return i
 }

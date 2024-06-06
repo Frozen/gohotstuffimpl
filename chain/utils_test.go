@@ -1,6 +1,10 @@
 package chain
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestNewTally(t *testing.T) {
 	tally := NewTally()
@@ -11,11 +15,11 @@ func TestNewTally(t *testing.T) {
 
 func TestTallyAdd(t *testing.T) {
 	tally := NewTally()
-	err := tally.Add(1)
+	err := tally.Add(Vote{Prepare, 0, 0})
 	if err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
-	err = tally.Add(1)
+	err = tally.Add(Vote{Prepare, 0, 0})
 	if err == nil {
 		t.Errorf("expected error, got nil")
 	}
@@ -23,11 +27,15 @@ func TestTallyAdd(t *testing.T) {
 
 func TestTallyLen(t *testing.T) {
 	tally := NewTally()
-	if tally.Len() != 0 {
-		t.Errorf("expected 0, got %d", tally.Len())
-	}
-	tally.Add(1)
-	if tally.Len() != 1 {
-		t.Errorf("expected 1, got %d", tally.Len())
-	}
+	require.Equal(t, 0, tally.Len(Prepare, 0))
+
+	//if  != 0 {
+	//	t.Errorf("expected 0, got %d", tally.Len())
+	//}
+	tally.Add(Vote{Prepare, 0, 0})
+	require.Equal(t, 1, tally.Len(Prepare, 0))
+	//tally.Add(1)
+	//if tally.Len() != 1 {
+	//	t.Errorf("expected 1, got %d", tally.Len())
+	//}
 }
