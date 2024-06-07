@@ -24,8 +24,10 @@ func NewBroadcaster(chs []chan Msg) *Broadcaster {
 }
 
 func (a *Broadcaster) Broadcast(m Msg) {
-	for _, c := range a.Chains {
-		c <- m
+	for i, c := range a.Chains {
+		if UniqueID(i) != m.Node {
+			c <- m
+		}
 	}
 }
 
