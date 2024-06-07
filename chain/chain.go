@@ -78,11 +78,16 @@ func (c *Chain) Run(ctx context.Context) {
 							Justify:    c.prepareQC,
 						})
 					}
+				case PreCommit: // leader: pre-commit -> commit
+					err := c.tally.Add(Vote{
+						Type:       PreCommit,
+						ViewNumber: m.ViewNumber,
+					}
 				}
-			} else {
+			} else { // validator
 				switch m.Type {
-				case Prepare: // validator: prepare -> pre-commit
-					if m.Justify == nil { // view change
+				case Prepare: //
+					if m.Justify == nil { // validator: prepare -> pre-commit
 						if !isLeaderForView(m.ViewNumber, m.Node) {
 							panic(fmt.Sprintf("invalid message received to node %d: %v", c.Uniq, m))
 						}
@@ -93,7 +98,7 @@ func (c *Chain) Run(ctx context.Context) {
 							Justify:    nil,
 							Payload:    nil,
 						})
-					} else {
+					} else { // validator: prepare -> pre-commit
 						if !isLeaderForView(m.ViewNumber, m.Node) {
 							panic("invalid message received")
 						}
