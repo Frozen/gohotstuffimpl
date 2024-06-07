@@ -1,15 +1,17 @@
 package chained
 
+const NumNodes = 3
+const Generic MessageType = "Generic"
+
 type MessageType string
 type ViewNumber = int
 type VotePower = int
 type BlockHash = string
+
 type Proof struct {
 	BlockHash BlockHash
-	Proof     []byte
+	Proof     VotePower
 }
-
-const Generic MessageType = "Generic"
 
 type Msg struct {
 	Type          MessageType
@@ -23,4 +25,13 @@ type Msg struct {
 type Responder interface {
 	Broadcast(Msg)
 	ToLeader(Msg)
+}
+
+type Node struct {
+	id              int
+	myViewNumber    ViewNumber
+	hashes          map[BlockHash]VotePower
+	voteBlockHash   BlockHash
+	futureBlockHash BlockHash
+	blockchain      *Blockchain
 }

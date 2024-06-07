@@ -5,19 +5,11 @@ import (
 	"strconv"
 )
 
-const NumNodes = 3
-
-type Node struct {
-	id            int
-	myViewNumber  ViewNumber
-	hashes        map[BlockHash]VotePower
-	voteBlockHash BlockHash
-}
-
 func NewNode(id int) *Node {
 	return &Node{
 		id:           id,
 		myViewNumber: 0,
+		blockchain:   NewBlockchain(),
 	}
 }
 
@@ -30,76 +22,50 @@ func (n *Node) Msg(viewNumber ViewNumber) Msg {
 }
 
 func (n *Node) Apply(msg Msg, responder Responder) {
+	switch { // I should be leader
+	case n.myViewNumber == msg.ViewNumber: // here we collect sigs
+		if msg.VoteBlockHash != n.voteBlockHash {
+			panic(fmt.Sprintf("expected vote block hash %s, got %s", n.voteBlockHash, msg.VoteBlockHash))
+		}
+		// TODO: check time as well
 
-	if msg.Block { // message from future leader
-		if n.isLeader(n.myViewNumber + 1) { // broadcast new block
-			Msg{
+		if n.vote(msg.VoteBlockHash) == NumNodes { // 100%
+			n.blockchain.AddBlock(msg.VoteBlockHash)
+
+			responder.Broadcast(Msg{
 				Type:          Generic,
 				ViewNumber:    msg.ViewNumber + 1,
 				SenderID:      n.id,
-				VoteBlockHash: strconv.Itoa(msg.ViewNumber),
-				Block:         true,
-			}
-			return
-		} else { //sign
-			Msg{
-				Type:          Generic,
-				ViewNumber:    msg.ViewNumber,
-				SenderID:      n.id,
-				VoteBlockHash: strconv.Itoa(msg.ViewNumber),
 				Block:         false,
-			}
-			return
-		}
-	} else { // message from validator
-		// i should be leader
-		switch {
-		case n.myViewNumber == msg.ViewNumber: // here we collect sigs
-			if !n.isLeader(n.myViewNumber) {
-				fmt.Println("just skip")
-				return
-			}
-			if n.vote(msg.VoteBlockHash) == NumNodes { // 100%
-				responder.Broadcast(Msg{
-					Type:          Generic,
-					ViewNumber:    msg.ViewNumber + 1,
-					SenderID:      n.id,
-					Block:         false,
-					VoteBlockHash: strconv.Itoa(msg.ViewNumber),
-					Proof: &Proof{
-						BlockHash: msg.VoteBlockHash,
-						Proof:     nil,
-					},
-				})
-			} else {
-				fmt.Println("debug: ", n.hashes[msg.VoteBlockHash])
-			}
+				VoteBlockHash: n.futureBlockHash,
+				Proof: &Proof{
+					BlockHash: n.voteBlockHash,
+					Proof:     n.hashes[n.voteBlockHash],
+				},
+			})
 
-		case n.myViewNumber+1 == msg.ViewNumber: // this is next leader
-			// if not leader
-			if !isLeader(msg.ViewNumber, msg.SenderID) {
-				panic(fmt.Sprintf("expected to be leader, got %d", n.id))
-			}
-
-			if !msg.Block { // there is no block from future leader, it's incorrect behavior
-				panic(fmt.Sprintf("expected block from future leader, got %v", msg))
-			}
-			n.vote(msg.VoteBlockHash)
-
-		default:
-			panic(fmt.Sprintf("expected view number %d, got %d", n.myViewNumber, msg.ViewNumber))
+			n.myViewNumber++
+			n.voteBlockHash = n.futureBlockHash
+			n.futureBlockHash = ""
+		} else {
+			fmt.Println("debug: ", n.hashes[msg.VoteBlockHash])
 		}
 
-		Msg{
-			Type: Generic,
+	case n.myViewNumber+1 == msg.ViewNumber: // this is next leader
+		// if not leader
+		if !isLeader(msg.ViewNumber, msg.SenderID) {
+			panic(fmt.Sprintf("expected to be leader, got %d", n.id))
 		}
-		return
 
+		if !msg.Block { // there is no block from future leader, it's incorrect behavior
+			panic(fmt.Sprintf("expected block from future leader, got %v", msg))
+		}
+		n.futureBlockHash = msg.VoteBlockHash
+		n.vote(msg.VoteBlockHash)
+
+	default:
+		panic(fmt.Sprintf("expected view number %d, got %d", n.myViewNumber, msg.ViewNumber))
 	}
-
-	//if msg.ViewNumber%NumNodes == n.id {
-	//
-	//}
 }
 
 func (n *Node) checkViewNumberBelongsToNodeSender(msg Msg) {
@@ -122,7 +88,11 @@ func (n *Node) vote(msg BlockHash) VotePower {
 	return n.hashes[msg]
 }
 
-func (n *Node) SoftTimer() {
+func (n *Node) SoftTimeout(msg Msg) {
+
+}
+
+func (n *Node) Timeout() {
 
 }
 
