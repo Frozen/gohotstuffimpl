@@ -1,6 +1,8 @@
 package chained
 
-const NumNodes = 3
+import "strconv"
+
+const NumNodes = 2
 const Generic MessageType = "Generic"
 
 type MessageType string
@@ -24,7 +26,7 @@ type Msg struct {
 
 type Responder interface {
 	Broadcast(Msg)
-	ToLeader(Msg)
+	Send(int, Msg)
 }
 
 type Node struct {
@@ -34,4 +36,16 @@ type Node struct {
 	voteBlockHash   BlockHash
 	futureBlockHash BlockHash
 	blockchain      *Blockchain
+}
+
+type Block struct {
+	id int
+}
+
+func newBlock(id int) *Block {
+	return &Block{id: id}
+}
+
+func (b *Block) Hash() string {
+	return strconv.Itoa(b.id)
 }

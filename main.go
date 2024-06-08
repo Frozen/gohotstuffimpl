@@ -1,7 +1,9 @@
 package main
 
-import "github.com/frozen/hotsss/chain"
+import (
+	"github.com/frozen/hotsss/chained"
+)
 
 func main() {
-	chain.Run()
+	chained.Run()
 }
